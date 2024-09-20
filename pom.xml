@@ -1,0 +1,265 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>com.rpl</groupId>
+  <artifactId>s3-backup-provider</artifactId>
+  <version>0.0.1-SNAPSHOT</version>
+  <name>S3 Backup Provider</name>
+  <description>A backup provider for Rama clusters that stores data in
+      an S3 bucket on AWS.</description>
+
+  <organization>
+    <name>Red Planet Labs</name>
+    <url>https://www.redplanetlabs.com</url>
+  </organization>
+
+  <licenses>
+    <license>
+      <name>The Apache License, Version 2.0</name>
+      <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+    </license>
+  </licenses>
+
+  <distributionManagement>
+    <repository>
+      <id>nexus-releases</id>
+      <url>https://nexus.redplanetlabs.com/repository/maven-releases</url>
+    </repository>
+    <snapshotRepository>
+      <id>nexus-snapshots</id>
+      <url>https://nexus.redplanetlabs.com/repository/maven-snapshots</url>
+    </snapshotRepository>
+  </distributionManagement>
+
+  <properties>
+    <aws.java.sdk.version>2.22.9</aws.java.sdk.version>
+    <docker-maven-plugin.version>0.43.4</docker-maven-plugin.version>
+    <docker.image.name>adobe/s3mock</docker.image.name>
+    <java.version>11</java.version>
+    <skipFormat>false</skipFormat>
+
+    <license-maven-plugin-git.version>4.3</license-maven-plugin-git.version>
+    <maven-checkstyle-plugin.version>3.3.1</maven-checkstyle-plugin.version>
+    <maven-clean-plugin.version>3.3.2</maven-clean-plugin.version>
+    <maven-compiler-plugin.version>3.12.0</maven-compiler-plugin.version>
+    <maven-deploy-plugin.version>3.1.1</maven-deploy-plugin.version>
+    <maven-enforcer-plugin.version>3.4.1</maven-enforcer-plugin.version>
+    <maven-failsafe-plugin.version>3.2.3</maven-failsafe-plugin.version>
+    <maven-gpg-plugin.version>3.1.0</maven-gpg-plugin.version>
+    <maven-install-plugin.version>3.1.1</maven-install-plugin.version>
+    <maven-jar-plugin.version>3.3.0</maven-jar-plugin.version>
+    <maven-javadoc-plugin.version>3.6.2</maven-javadoc-plugin.version>
+    <maven-release-plugin.version>3.0.1</maven-release-plugin.version>
+    <maven-resources-plugin.version>3.3.1</maven-resources-plugin.version>
+    <maven-source-plugin.version>3.3.0</maven-source-plugin.version>
+    <maven.compiler.release>8</maven.compiler.release>
+
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <rama-helpers.version>0.0.16-SNAPSHOT</rama-helpers.version>
+
+    <rama.version>0.0.6-SNAPSHOT</rama.version>
+    <sortpom-maven-plugin.version>3.3.0</sortpom-maven-plugin.version>
+  </properties>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <!-- This provides versions for the varios aws packages, which
+             may not be identical to the top level version -->
+        <groupId>software.amazon.awssdk</groupId>
+        <artifactId>bom</artifactId>
+        <version>${aws.java.sdk.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <dependencies>
+    <dependency>
+      <groupId>com.rpl</groupId>
+      <artifactId>rama</artifactId>
+      <version>${rama.version}</version>
+      <scope>provided</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>com.rpl</groupId>
+      <artifactId>rama-helpers</artifactId>
+      <version>${rama-helpers.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>software.amazon.awssdk</groupId>
+      <artifactId>s3</artifactId>
+    </dependency>
+  </dependencies>
+
+  <repositories>
+    <repository>
+      <id>clojars.org</id>
+      <url>https://clojars.org/repo</url>
+    </repository>
+  </repositories>
+
+  <build>
+    <plugins>
+
+      <plugin>
+        <groupId>com.github.ekryd.sortpom</groupId>
+        <artifactId>sortpom-maven-plugin</artifactId>
+        <version>${sortpom-maven-plugin.version}</version>
+        <configuration>
+          <encoding>${project.build.sourceEncoding}</encoding>
+          <keepBlankLines>true</keepBlankLines>
+          <predefinedSortOrder>recommended_2008_06</predefinedSortOrder>
+          <sortDependencies>groupId,artifactId,scope</sortDependencies>
+          <sortModules>true</sortModules>
+          <sortPlugins>groupId,artifactId,scope</sortPlugins>
+          <sortProperties>true</sortProperties>
+        </configuration>
+        <executions>
+          <execution>
+            <goals>
+              <goal>sort</goal>
+            </goals>
+            <phase>verify</phase>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>com.spotify.fmt</groupId>
+        <artifactId>fmt-maven-plugin</artifactId>
+        <version>2.20</version>
+        <configuration>
+          <verbose>true</verbose>
+          <filesNamePattern>.*\.java</filesNamePattern>
+          <skip>${skipFormat}</skip>
+          <style>google</style>
+        </configuration>
+        <executions>
+          <execution>
+            <goals>
+              <goal>format</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>io.fabric8</groupId>
+        <artifactId>docker-maven-plugin</artifactId>
+        <version>${docker-maven-plugin.version}</version>
+        <configuration combine.self="override">
+          <verbose>true</verbose>
+          <!-- Even if this profile is active, we do not start the
+                 Docker container if the tests are skipped, since it is
+                 only used for the integration tests. -->
+          <skip>${skipTests}</skip>
+          <images>
+            <image>
+              <alias>s3mock</alias>
+              <name>${docker.image.name}</name>
+              <run>
+                <log>
+                  <enabled>true</enabled>
+                </log>
+                <ports>
+                  <port>+docker.host.ip:it.s3mock.port_http:9090</port>
+                  <port>+docker.host.ip:it.s3mock.port_https:9191</port>
+                </ports>
+                <wait>
+                  <http>
+                    <url>http://${docker.host.ip}:${it.s3mock.port_http}/favicon.ico</url>
+                  </http>
+                  <time>30000</time>
+                </wait>
+                <env>
+                  <COM_ADOBE_TESTING_S3MOCK_REGION>eu-west-1</COM_ADOBE_TESTING_S3MOCK_REGION>
+                </env>
+                <memory>128000000</memory>
+              </run>
+            </image>
+          </images>
+        </configuration>
+        <executions>
+          <execution>
+            <id>start-docker-image</id>
+            <goals>
+              <goal>start</goal>
+            </goals>
+            <phase>pre-integration-test</phase>
+          </execution>
+          <execution>
+            <id>stop-docker-image</id>
+            <goals>
+              <goal>stop</goal>
+            </goals>
+            <phase>post-integration-test</phase>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>${maven-compiler-plugin.version}</version>
+        <configuration>
+          <release>${maven.compiler.release}</release>
+          &gt;
+          <compilerArgs>
+            <arg>-Xlint:all</arg>
+          </compilerArgs>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <artifactId>maven-enforcer-plugin</artifactId>
+        <version>${maven-enforcer-plugin.version}</version>
+	 <executions>
+          <execution>
+            <id>enforce-versions</id>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+		<requireMavenVersion>
+		  <version>[3.5,)</version>
+		</requireMavenVersion>
+		<requireJavaVersion>
+		  <version>${java.version}</version>
+		</requireJavaVersion>
+              </rules>
+            </configuration>
+	  </execution>
+	 </executions>
+      </plugin>
+
+      <plugin>
+        <artifactId>maven-failsafe-plugin</artifactId>
+        <version>${maven-failsafe-plugin.version}</version>
+        <executions>
+          <execution>
+            <goals>
+              <goal>integration-test</goal>
+              <goal>verify</goal>
+            </goals>
+            <configuration>
+              <systemPropertyVariables>
+                <it.s3mock.host>${docker.host.ip}</it.s3mock.host>
+                <it.s3mock.port_https>${it.s3mock.port_https}</it.s3mock.port_https>
+                <it.s3mock.port_http>${it.s3mock.port_http}</it.s3mock.port_http>
+              </systemPropertyVariables>
+              <runOrder>alphabetical</runOrder>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+    </plugins>
+  </build>
+
+</project>
