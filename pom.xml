@@ -3,7 +3,7 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>com.rpl</groupId>
-  <artifactId>s3-backup-provider</artifactId>
+  <artifactId>rama-s3-backup-provider</artifactId>
   <version>0.0.1</version>
   <name>S3 Backup Provider</name>
   <description>A backup provider for Rama clusters that stores data in
@@ -21,54 +21,20 @@
     </license>
   </licenses>
 
-  <distributionManagement>
-    <repository>
-      <id>nexus-releases</id>
-      <url>https://nexus.redplanetlabs.com/repository/maven-releases</url>
-    </repository>
-    <snapshotRepository>
-      <id>nexus-snapshots</id>
-      <url>https://nexus.redplanetlabs.com/repository/maven-snapshots</url>
-    </snapshotRepository>
-  </distributionManagement>
-
   <properties>
-    <aws.java.sdk.version>2.22.9</aws.java.sdk.version>
-    <docker-maven-plugin.version>0.43.4</docker-maven-plugin.version>
-    <docker.image.name>adobe/s3mock</docker.image.name>
-    <java.version>11</java.version>
-    <skipFormat>false</skipFormat>
-
-    <license-maven-plugin-git.version>4.3</license-maven-plugin-git.version>
-    <maven-checkstyle-plugin.version>3.3.1</maven-checkstyle-plugin.version>
-    <maven-clean-plugin.version>3.3.2</maven-clean-plugin.version>
-    <maven-compiler-plugin.version>3.12.0</maven-compiler-plugin.version>
-    <maven-deploy-plugin.version>3.1.1</maven-deploy-plugin.version>
-    <maven-enforcer-plugin.version>3.4.1</maven-enforcer-plugin.version>
-    <maven-failsafe-plugin.version>3.2.3</maven-failsafe-plugin.version>
-    <maven-gpg-plugin.version>3.1.0</maven-gpg-plugin.version>
-    <maven-install-plugin.version>3.1.1</maven-install-plugin.version>
-    <maven-jar-plugin.version>3.3.0</maven-jar-plugin.version>
-    <maven-javadoc-plugin.version>3.6.2</maven-javadoc-plugin.version>
-    <maven-release-plugin.version>3.0.1</maven-release-plugin.version>
-    <maven-resources-plugin.version>3.3.1</maven-resources-plugin.version>
-    <maven-source-plugin.version>3.3.0</maven-source-plugin.version>
-    <maven.compiler.release>8</maven.compiler.release>
-
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-
-    <rama.version>0.0.6-SNAPSHOT</rama.version>
-    <sortpom-maven-plugin.version>3.3.0</sortpom-maven-plugin.version>
+    <maven.compiler.source>8</maven.compiler.source>
+    <maven.compiler.target>8</maven.compiler.target>
   </properties>
 
   <dependencyManagement>
     <dependencies>
       <dependency>
-        <!-- This provides versions for the varios aws packages, which
+        <!-- This provides versions for the various aws packages, which
              may not be identical to the top level version -->
         <groupId>software.amazon.awssdk</groupId>
         <artifactId>bom</artifactId>
-        <version>${aws.java.sdk.version}</version>
+        <version>2.22.9</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>
@@ -79,7 +45,7 @@
     <dependency>
       <groupId>com.rpl</groupId>
       <artifactId>rama</artifactId>
-      <version>${rama.version}</version>
+      <version>0.0.6-SNAPSHOT</version>
       <scope>provided</scope>
     </dependency>
 
@@ -98,53 +64,10 @@
 
   <build>
     <plugins>
-
-      <plugin>
-        <groupId>com.github.ekryd.sortpom</groupId>
-        <artifactId>sortpom-maven-plugin</artifactId>
-        <version>${sortpom-maven-plugin.version}</version>
-        <configuration>
-          <encoding>${project.build.sourceEncoding}</encoding>
-          <keepBlankLines>true</keepBlankLines>
-          <predefinedSortOrder>recommended_2008_06</predefinedSortOrder>
-          <sortDependencies>groupId,artifactId,scope</sortDependencies>
-          <sortModules>true</sortModules>
-          <sortPlugins>groupId,artifactId,scope</sortPlugins>
-          <sortProperties>true</sortProperties>
-        </configuration>
-        <executions>
-          <execution>
-            <goals>
-              <goal>sort</goal>
-            </goals>
-            <phase>verify</phase>
-          </execution>
-        </executions>
-      </plugin>
-
-      <plugin>
-        <groupId>com.spotify.fmt</groupId>
-        <artifactId>fmt-maven-plugin</artifactId>
-        <version>2.20</version>
-        <configuration>
-          <verbose>true</verbose>
-          <filesNamePattern>.*\.java</filesNamePattern>
-          <skip>${skipFormat}</skip>
-          <style>google</style>
-        </configuration>
-        <executions>
-          <execution>
-            <goals>
-              <goal>format</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-
       <plugin>
         <groupId>io.fabric8</groupId>
         <artifactId>docker-maven-plugin</artifactId>
-        <version>${docker-maven-plugin.version}</version>
+        <version>0.43.4</version>
         <configuration combine.self="override">
           <verbose>true</verbose>
           <!-- Even if this profile is active, we do not start the
@@ -154,7 +77,7 @@
           <images>
             <image>
               <alias>s3mock</alias>
-              <name>${docker.image.name}</name>
+              <name>adobe/s3mock</name>
               <run>
                 <log>
                   <enabled>true</enabled>
@@ -195,23 +118,22 @@
         </executions>
       </plugin>
 
-      <plugin>
+      <!-- <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
-        <version>${maven-compiler-plugin.version}</version>
+        <version>3.12.0</version>
         <configuration>
-          <release>${maven.compiler.release}</release>
           &gt;
           <compilerArgs>
             <arg>-Xlint:all</arg>
           </compilerArgs>
         </configuration>
-      </plugin>
+      </plugin> -->
 
       <plugin>
         <artifactId>maven-enforcer-plugin</artifactId>
-        <version>${maven-enforcer-plugin.version}</version>
-	 <executions>
+        <version>3.4.1</version>
+      	<executions>
           <execution>
             <id>enforce-versions</id>
             <goals>
@@ -219,21 +141,21 @@
             </goals>
             <configuration>
               <rules>
-		<requireMavenVersion>
-		  <version>[3.5,)</version>
-		</requireMavenVersion>
-		<requireJavaVersion>
-		  <version>${java.version}</version>
-		</requireJavaVersion>
+            		<requireMavenVersion>
+            		  <version>[3.5,)</version>
+            		</requireMavenVersion>
+            		<requireJavaVersion>
+            		  <version>8</version>
+            		</requireJavaVersion>
               </rules>
             </configuration>
-	  </execution>
-	 </executions>
+      	  </execution>
+      	</executions>
       </plugin>
 
       <plugin>
         <artifactId>maven-failsafe-plugin</artifactId>
-        <version>${maven-failsafe-plugin.version}</version>
+        <version>3.2.3</version>
         <executions>
           <execution>
             <goals>
@@ -255,4 +177,45 @@
     </plugins>
   </build>
 
+        <!-- <finalName>${custom.final.name}</finalName>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>2.22.0</version>
+                <configuration>
+                    <trimStackTrace>false</trimStackTrace>
+                    <skipTests>false</skipTests>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>versions-maven-plugin</artifactId>
+                <version>2.10.0</version>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-help-plugin</artifactId>
+                <version>3.2.0</version>
+            </plugin>
+            <plugin>
+          			<groupId>org.apache.maven.plugins</groupId>
+          			<artifactId>maven-javadoc-plugin</artifactId>
+          			<executions>
+          				<execution>
+            					<id>attach-javadocs</id>
+            					<goals>
+            					    <goal>jar</goal>
+            					</goals>
+          				</execution>
+          			</executions>
+        		</plugin>
+        </plugins> -->
+
+  <distributionManagement>
+      <repository>
+        <id>nexus-releases</id>
+        <url>https://nexus.redplanetlabs.com/repository/maven-releases</url>
+      </repository>
+  </distributionManagement>
 </project>
