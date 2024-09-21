@@ -2,9 +2,9 @@ A backup provider for Rama that uses AWS S3.
 
 # Usage
 
-To use the provider, include the provider jar in your deployment jar.
+To use the provider, include the provided jar in the `lib/` directory of the Conductor and Supervisor nodes.
 
-Set the BACKUP-PROVIDER config to
+Set the `backup.provider` config to:
 
 `com.rpl.rama.backup.s3.S3BackupProvider <bucket-name>`
 
@@ -16,10 +16,10 @@ bucket if it does not exist.
 
 # Credentials
 
-The Rama s3-provider use the AWS [default provider chain][https://docs.aws.amazon.com/sdkref/latest/guide/standardized-credentials.html] to determine credentials.
+The Rama s3-provider use the AWS [default provider chain](https://docs.aws.amazon.com/sdkref/latest/guide/standardized-credentials.html) to determine credentials.
 
 The recommended way to provide credentials when running Rama on AWS is
-to use [instance profiles][https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use_switch-role-ec2_instance-profiles.html].
+to use [instance profiles](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use_switch-role-ec2_instance-profiles.html).
 
 # Tests
 
