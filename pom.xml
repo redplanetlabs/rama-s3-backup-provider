@@ -4,7 +4,7 @@
 
   <groupId>com.rpl</groupId>
   <artifactId>s3-backup-provider</artifactId>
-  <version>0.0.1-SNAPSHOT</version>
+  <version>0.0.1</version>
   <name>S3 Backup Provider</name>
   <description>A backup provider for Rama clusters that stores data in
       an S3 bucket on AWS.</description>
@@ -56,7 +56,6 @@
     <maven.compiler.release>8</maven.compiler.release>
 
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <rama-helpers.version>0.0.16-SNAPSHOT</rama-helpers.version>
 
     <rama.version>0.0.6-SNAPSHOT</rama.version>
     <sortpom-maven-plugin.version>3.3.0</sortpom-maven-plugin.version>
@@ -82,12 +81,6 @@
       <artifactId>rama</artifactId>
       <version>${rama.version}</version>
       <scope>provided</scope>
-    </dependency>
-
-    <dependency>
-      <groupId>com.rpl</groupId>
-      <artifactId>rama-helpers</artifactId>
-      <version>${rama-helpers.version}</version>
     </dependency>
 
     <dependency>
