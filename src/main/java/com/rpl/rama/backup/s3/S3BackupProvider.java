@@ -243,42 +243,30 @@ public class S3BackupProvider implements BackupProvider {
       }
       final ListObjectsV2Request request = builder.build();
 
-      final CompletableFuture<KeysPage> result =
-          client
+      return client
               .listObjectsV2(request)
               .thenApply(
                   (res) -> {
-                    try {
-                      if (recursive) {
-                        final List<String> keys =
-                            (res.contents())
-                                .stream().map(S3Object::key).collect(Collectors.toList());
-                        return new KeysPage(keys, res.continuationToken());
-                      } else {
-                        final List<String> keys =
-                            Stream.concat(
-                                    (res.contents())
-                                        .stream().map(S3BackupProvider::s3ObjectFilename),
-                                    (res.commonPrefixes())
-                                        .stream()
-                                            .map(
-                                                prefix.endsWith("/")
-                                                    ? S3BackupProvider::commonPrefixFilename
-                                                    : S3BackupProvider::commonPrefixPath))
-                                .collect(Collectors.toList());
-                        return new BackupProvider.KeysPage(keys, res.continuationToken());
-                      }
-                    } catch (Exception ex) {
-                      System.err.println(ex.toString());
-                      return null;
+                    if (recursive) {
+                      final List<String> keys =
+                          (res.contents())
+                              .stream().map(S3Object::key).collect(Collectors.toList());
+                      return new KeysPage(keys, res.continuationToken());
+                    } else {
+                      final List<String> keys =
+                          Stream.concat(
+                                  (res.contents())
+                                      .stream().map(S3BackupProvider::s3ObjectFilename),
+                                  (res.commonPrefixes())
+                                      .stream()
+                                          .map(
+                                              prefix.endsWith("/")
+                                                  ? S3BackupProvider::commonPrefixFilename
+                                                  : S3BackupProvider::commonPrefixPath))
+                              .collect(Collectors.toList());
+                      return new BackupProvider.KeysPage(keys, res.continuationToken());
                     }
-                  })
-              .exceptionally(
-                  ex -> {
-                    System.err.println(ex.toString());
-                    return new KeysPage(Collections.emptyList(), null);
                   });
-      return result;
     } catch (final S3Exception e) {
       return failedFuture(e);
     }
