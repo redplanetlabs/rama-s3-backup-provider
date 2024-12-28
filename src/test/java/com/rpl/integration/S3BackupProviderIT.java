@@ -72,12 +72,12 @@ public class S3BackupProviderIT {
 
       testing("    lists no keys,");
       {
-        BackupProvider.KeysPage page = provider.listKeys("", false, null).get();
+        BackupProvider.KeysPage page = provider.listKeysNonRecursive("", null, 1000).get();
         assertEquals(Collections.emptyList(), page.keys);
         assert page.nextPageMarker == null;
       }
       {
-        BackupProvider.KeysPage page = provider.listKeys("", true, null).get();
+        BackupProvider.KeysPage page = provider.listKeysRecursive("", null).get();
         assertEquals(Collections.emptyList(), page.keys);
         assert page.nextPageMarker == null;
       }
@@ -102,24 +102,24 @@ public class S3BackupProviderIT {
       }
       testing("    lists the added key");
       {
-        BackupProvider.KeysPage page = provider.listKeys("a/b/", false, null).get();
+        BackupProvider.KeysPage page = provider.listKeysNonRecursive("a/b/", null, 1000).get();
         assertEquals(Arrays.asList("c"), page.keys);
         assert page.nextPageMarker == null;
       }
       {
-        BackupProvider.KeysPage page = provider.listKeys("", true, null).get();
+        BackupProvider.KeysPage page = provider.listKeysRecursive("", null).get();
         assertEquals(Arrays.asList("a/b/c"), page.keys);
         assert page.nextPageMarker == null;
       }
 
       testing("    lists the root directory elements");
       {
-        BackupProvider.KeysPage page = provider.listKeys("a/", false, null).get();
+        BackupProvider.KeysPage page = provider.listKeysNonRecursive("a/", null, 1000).get();
         assertEquals(Arrays.asList("b"), page.keys);
         assert page.nextPageMarker == null;
       }
       {
-        BackupProvider.KeysPage page = provider.listKeys("a/", true, null).get();
+        BackupProvider.KeysPage page = provider.listKeysRecursive("a/", null).get();
         assertEquals(Arrays.asList("a/b/c"), page.keys);
         assert page.nextPageMarker == null;
       }
