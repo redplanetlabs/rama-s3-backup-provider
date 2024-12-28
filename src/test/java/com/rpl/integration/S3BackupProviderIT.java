@@ -61,7 +61,7 @@ public class S3BackupProviderIT {
         System.setProperty("aws.accessKeyId", "something");
         System.setProperty("aws.secretAccessKey", "else");
 
-        // An S3BackpProvider instance,
+        // An S3BackupProvider instance,
         int port = Integer.getInteger("it.s3mock.port_http", 9090);
         String host = System.getProperty("it.s3mock.host", "localhost");
         URI uri = new URI("http", null, host, port, "/testbucket", null, null);

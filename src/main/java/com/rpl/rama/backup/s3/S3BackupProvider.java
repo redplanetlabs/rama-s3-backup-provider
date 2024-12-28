@@ -231,41 +231,59 @@ public class S3BackupProvider implements BackupProvider {
   }
 
   @Override
-  public CompletableFuture<KeysPage> listKeys(
-      final String prefix, final Boolean recursive, final Object paginationKey) {
+  public CompletableFuture<KeysPage> listKeysRecursive(final String prefix, final String paginationKey) {
     try {
-      final ListObjectsV2Request.Builder builder =
+      ListObjectsV2Request.Builder builder =
           ListObjectsV2Request.builder()
               .bucket(bucketName)
-              .continuationToken((String) paginationKey);
-      if (!recursive) {
-        builder.prefix(prefix).delimiter("/");
-      }
-      final ListObjectsV2Request request = builder.build();
+              .continuationToken(paginationKey);
+      ListObjectsV2Request request = builder.build();
 
       return client
               .listObjectsV2(request)
               .thenApply(
                   (res) -> {
-                    if (recursive) {
-                      final List<String> keys =
-                          (res.contents())
-                              .stream().map(S3Object::key).collect(Collectors.toList());
-                      return new KeysPage(keys, res.continuationToken());
-                    } else {
-                      final List<String> keys =
+                    List<String> keys =
+                        res.contents()
+                           .stream()
+                           .map(S3Object::key)
+                           .collect(Collectors.toList());
+                    return new KeysPage(keys, res.continuationToken());
+                  });
+    } catch (final S3Exception e) {
+      return failedFuture(e);
+    }
+  }
+
+  @Override
+  public CompletableFuture<KeysPage> listKeysNonRecursive(
+      final String prefix, final String paginationKey, final int pageSize) {
+    try {
+      ListObjectsV2Request.Builder builder =
+          ListObjectsV2Request.builder()
+              .bucket(bucketName)
+              .continuationToken(paginationKey)
+              .maxKeys(pageSize)
+              .prefix(prefix)
+              .delimiter("/");
+      ListObjectsV2Request request = builder.build();
+
+      return client
+              .listObjectsV2(request)
+              .thenApply(
+                  (res) -> {
+                    List<String> keys =
                           Stream.concat(
-                                  (res.contents())
-                                      .stream().map(S3BackupProvider::s3ObjectFilename),
-                                  (res.commonPrefixes())
-                                      .stream()
-                                          .map(
-                                              prefix.endsWith("/")
-                                                  ? S3BackupProvider::commonPrefixFilename
-                                                  : S3BackupProvider::commonPrefixPath))
+                                  res.contents()
+                                     .stream()
+                                     .map(S3BackupProvider::s3ObjectFilename),
+                                  res.commonPrefixes()
+                                     .stream()
+                                      .map(prefix.endsWith("/")
+                                            ? S3BackupProvider::commonPrefixFilename
+                                            : S3BackupProvider::commonPrefixPath))
                               .collect(Collectors.toList());
                       return new BackupProvider.KeysPage(keys, res.continuationToken());
-                    }
                   });
     } catch (final S3Exception e) {
       return failedFuture(e);
