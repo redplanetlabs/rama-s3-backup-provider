@@ -16,6 +16,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.core.async.AsyncRequestBody;
 import software.amazon.awssdk.core.client.config.SdkAdvancedAsyncClientOption;
@@ -40,6 +42,7 @@ import software.amazon.awssdk.utils.ThreadFactoryBuilder;
  * An implementation of a Rama BackupProvider for AWS S3.
  */
 public class S3BackupProvider implements BackupProvider {
+  private static final Logger LOGGER = LoggerFactory.getLogger(S3BackupProvider.class);
 
   S3AsyncClient client;
   String bucketName = null;
@@ -93,13 +96,13 @@ public class S3BackupProvider implements BackupProvider {
             .headBucket(headRequest)
             .exceptionally(
                 (ex) -> {
-                  System.err.println(ex.toString());
+                  LOGGER.warn("Exception on head request", ex);
                   return null;
                 })
             .join();
 
     if (head == null) {
-      System.err.println("  creating bucket " + bucketName);
+      LOGGER.info("Creating bucket " + bucketName);
       this.client.createBucket(CreateBucketRequest.builder().bucket(bucketName).build()).get();
     }
     client.waiter().waitUntilBucketExists(headRequest).get();
@@ -258,14 +261,34 @@ public class S3BackupProvider implements BackupProvider {
   @Override
   public CompletableFuture<KeysPage> listKeysNonRecursive(
       final String prefix, final String paginationKey, final int pageSize) {
+    // - pagination with S3 API is tricky, since AWS does not guarantee it will
+    //   return the configured max keys even if that many are available
+    // - when it returns max keys, there is no continuation token even if there
+    // are more keys beyond that
+    // - if it returns less than max keys and there are more items remaining, AWS
+    // will return a continuation token
+    // - rather than try to guarantee pageSize elements being returned here, this
+    // implementation returns as many as AWS is willing to return in one request
+    // - if there's a continuation token returned, that is used for the next pagination
+    // token
+    // - otherwise, if the returned keys are equal to the configured max keys, the last
+    // key is used as the pagination token along with the .startAfter option
     try {
       ListObjectsV2Request.Builder builder =
           ListObjectsV2Request.builder()
               .bucket(bucketName)
-              .startAfter(paginationKey)
               .maxKeys(pageSize)
               .prefix(prefix)
               .delimiter("/");
+
+      if(paginationKey!=null) {
+        String t = paginationKey.substring(0, 1);
+        String v = paginationKey.substring(1);
+        if(t.equals("C")) builder = builder.continuationToken(v);
+        else if(t.equals("S")) builder = builder.startAfter(v);
+        else throw new RuntimeException("Unexpected pagination key: " + paginationKey);
+      }
+
       ListObjectsV2Request request = builder.build();
 
       return client
@@ -283,12 +306,10 @@ public class S3BackupProvider implements BackupProvider {
                                             ? S3BackupProvider::commonPrefixFilename
                                             : S3BackupProvider::commonPrefixPath))
                               .collect(Collectors.toList());
-                      String newPaginationKey = null;
-                      if(keys.size() == pageSize) {
-                        if(!prefix.endsWith("/")) throw new RuntimeException("Invalid prefix for pagination " + prefix);
-                        newPaginationKey = prefix + keys.get(keys.size()-1);
-                      }
-                      return new BackupProvider.KeysPage(keys, newPaginationKey);
+                      String nextToken = null;
+                      if(res.continuationToken()!=null) nextToken = "C" + res.continuationToken();
+                      else if(keys.size() == pageSize) nextToken = "S" + prefix + keys.get(keys.size() - 1);
+                      return new BackupProvider.KeysPage(keys, nextToken);
                   });
     } catch (final S3Exception e) {
       return failedFuture(e);

@@ -158,7 +158,6 @@ public class S3BackupProviderIT {
             provider.putObject("x/k4", new ByteArrayInputStream(content), 3L).get();
             BackupProvider.KeysPage page = provider.listKeysNonRecursive("x/", null, 2).get();
             assertEquals(Arrays.asList("k1", "k2"), page.keys);
-            System.out.println("FIRST PAGE MARKER: " + page.nextPageMarker);
             page = provider.listKeysNonRecursive("x/", page.nextPageMarker, 2).get();
             assertEquals(Arrays.asList("k3", "k4"), page.keys);
             page = provider.listKeysNonRecursive("x/", page.nextPageMarker, 2).get();
