@@ -11,9 +11,7 @@ import java.io.InputStreamReader;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -42,6 +40,10 @@ public class S3BackupProviderIT {
 
   private static void testing(String s) {
     System.err.println(s);
+  }
+
+  public static String zeroPad(int num, int length) {
+    return String.format("%0" + length + "d", num);
   }
 
   public void testS3Provider() throws Exception {
@@ -111,7 +113,6 @@ public class S3BackupProviderIT {
         assertEquals(Arrays.asList("a/b/c"), page.keys);
         assert page.nextPageMarker == null;
       }
-
       testing("    lists the root directory elements");
       {
         BackupProvider.KeysPage page = provider.listKeysNonRecursive("a/", null, 1000).get();
@@ -123,7 +124,21 @@ public class S3BackupProviderIT {
         assertEquals(Arrays.asList("a/b/c"), page.keys);
         assert page.nextPageMarker == null;
       }
-
+      {
+        BackupProvider.KeysPage page = provider.listKeysRecursive("a", null).get();
+        assertEquals(Arrays.asList("a/b/c"), page.keys);
+        assert page.nextPageMarker == null;
+      }
+      {
+        BackupProvider.KeysPage page = provider.listKeysRecursive("a/b", null).get();
+        assertEquals(Arrays.asList("a/b/c"), page.keys);
+        assert page.nextPageMarker == null;
+      }
+      {
+        BackupProvider.KeysPage page = provider.listKeysRecursive("a/b/", null).get();
+        assertEquals(Arrays.asList("a/b/c"), page.keys);
+        assert page.nextPageMarker == null;
+      }
       testing("  with a progress listener");
       {
         AtomicLong callCount = new AtomicLong(0);
@@ -162,6 +177,32 @@ public class S3BackupProviderIT {
             assertEquals(Arrays.asList("k3", "k4"), page.keys);
             page = provider.listKeysNonRecursive("x/", page.nextPageMarker, 2).get();
             assertEquals(Arrays.asList("k5"), page.keys);
+            assertEquals(null, page.nextPageMarker);
+      }
+      testing("  large number of keys");
+      {
+            byte[] content = "abc".getBytes();
+            for(int i=0; i<1100; i++) {
+              provider.putObject("z/" + zeroPad(i, 4), new ByteArrayInputStream(content), 3L).get();
+            }
+            BackupProvider.KeysPage page = provider.listKeysNonRecursive("z/", null, -1).get();
+            List expected = new ArrayList();
+            for(int i=0; i<1000; i++) expected.add(zeroPad(i, 4));
+            assertEquals(expected, page.keys);
+            page = provider.listKeysNonRecursive("z/", page.nextPageMarker, -1).get();
+            expected = new ArrayList();
+            for(int i=1000; i<1100; i++) expected.add(zeroPad(i, 4));
+            assertEquals(expected, page.keys);
+            assertEquals(null, page.nextPageMarker);
+
+            page = provider.listKeysRecursive("z/", null).get();
+            expected = new ArrayList();
+            for(int i=0; i<1000; i++) expected.add("z/" + zeroPad(i, 4));
+            assertEquals(expected, page.keys);
+            page = provider.listKeysRecursive("z/", page.nextPageMarker).get();
+            expected = new ArrayList();
+            for(int i=1000; i<1100; i++) expected.add("z/" + zeroPad(i, 4));
+            assertEquals(expected, page.keys);
             assertEquals(null, page.nextPageMarker);
       }
       System.err.println("done");

@@ -239,6 +239,7 @@ public class S3BackupProvider implements BackupProvider {
       ListObjectsV2Request.Builder builder =
           ListObjectsV2Request.builder()
               .bucket(bucketName)
+              .prefix(prefix)
               .continuationToken(paginationKey);
       ListObjectsV2Request request = builder.build();
 
@@ -251,7 +252,7 @@ public class S3BackupProvider implements BackupProvider {
                            .stream()
                            .map(S3Object::key)
                            .collect(Collectors.toList());
-                    return new KeysPage(keys, res.continuationToken());
+                    return new KeysPage(keys, res.isTruncated() ? res.nextContinuationToken() : null);
                   });
     } catch (final S3Exception e) {
       return failedFuture(e);
@@ -261,32 +262,17 @@ public class S3BackupProvider implements BackupProvider {
   @Override
   public CompletableFuture<KeysPage> listKeysNonRecursive(
       final String prefix, final String paginationKey, final int pageSize) {
-    // - pagination with S3 API is tricky, since AWS does not guarantee it will
-    //   return the configured max keys even if that many are available
-    // - when it returns max keys, there is no continuation token even if there
-    // are more keys beyond that
-    // - if it returns less than max keys and there are more items remaining, AWS
-    // will return a continuation token
-    // - rather than try to guarantee pageSize elements being returned here, this
-    // implementation returns as many as AWS is willing to return in one request
-    // - if there's a continuation token returned, that is used for the next pagination
-    // token
-    // - otherwise, if the returned keys are equal to the configured max keys, the last
-    // key is used as the pagination token along with the .startAfter option
     try {
       ListObjectsV2Request.Builder builder =
           ListObjectsV2Request.builder()
               .bucket(bucketName)
-              .maxKeys(pageSize)
               .prefix(prefix)
               .delimiter("/");
 
+      if(pageSize > 0) builder = builder.maxKeys(pageSize);
+
       if(paginationKey!=null) {
-        String t = paginationKey.substring(0, 1);
-        String v = paginationKey.substring(1);
-        if(t.equals("C")) builder = builder.continuationToken(v);
-        else if(t.equals("S")) builder = builder.startAfter(v);
-        else throw new RuntimeException("Unexpected pagination key: " + paginationKey);
+        builder = builder.continuationToken(paginationKey);
       }
 
       ListObjectsV2Request request = builder.build();
@@ -306,10 +292,8 @@ public class S3BackupProvider implements BackupProvider {
                                             ? S3BackupProvider::commonPrefixFilename
                                             : S3BackupProvider::commonPrefixPath))
                               .collect(Collectors.toList());
-                      String nextToken = null;
-                      if(res.continuationToken()!=null) nextToken = "C" + res.continuationToken();
-                      else if(keys.size() == pageSize) nextToken = "S" + prefix + keys.get(keys.size() - 1);
-                      return new BackupProvider.KeysPage(keys, nextToken);
+                      String ctoken = res.isTruncated() ? res.nextContinuationToken() : null;
+                      return new BackupProvider.KeysPage(keys, ctoken);
                   });
     } catch (final S3Exception e) {
       return failedFuture(e);
