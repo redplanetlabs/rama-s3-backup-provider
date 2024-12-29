@@ -262,7 +262,7 @@ public class S3BackupProvider implements BackupProvider {
       ListObjectsV2Request.Builder builder =
           ListObjectsV2Request.builder()
               .bucket(bucketName)
-              .continuationToken(paginationKey)
+              .startAfter(paginationKey)
               .maxKeys(pageSize)
               .prefix(prefix)
               .delimiter("/");
@@ -283,7 +283,12 @@ public class S3BackupProvider implements BackupProvider {
                                             ? S3BackupProvider::commonPrefixFilename
                                             : S3BackupProvider::commonPrefixPath))
                               .collect(Collectors.toList());
-                      return new BackupProvider.KeysPage(keys, res.continuationToken());
+                      String newPaginationKey = null;
+                      if(keys.size() == pageSize) {
+                        if(!prefix.endsWith("/")) throw new RuntimeException("Invalid prefix for pagination " + prefix);
+                        newPaginationKey = prefix + keys.get(keys.size()-1);
+                      }
+                      return new BackupProvider.KeysPage(keys, newPaginationKey);
                   });
     } catch (final S3Exception e) {
       return failedFuture(e);

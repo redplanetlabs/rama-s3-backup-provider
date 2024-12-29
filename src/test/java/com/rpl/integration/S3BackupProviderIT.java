@@ -148,6 +148,23 @@ public class S3BackupProviderIT {
           assert callCount.get() > 1;
         }
       }
+      testing("  paginated list keys");
+      {
+            byte[] content = "abc".getBytes();
+            provider.putObject("x/k2", new ByteArrayInputStream(content), 3L).get();
+            provider.putObject("x/k1", new ByteArrayInputStream(content), 3L).get();
+            provider.putObject("x/k5", new ByteArrayInputStream(content), 3L).get();
+            provider.putObject("x/k3", new ByteArrayInputStream(content), 3L).get();
+            provider.putObject("x/k4", new ByteArrayInputStream(content), 3L).get();
+            BackupProvider.KeysPage page = provider.listKeysNonRecursive("x/", null, 2).get();
+            assertEquals(Arrays.asList("k1", "k2"), page.keys);
+            System.out.println("FIRST PAGE MARKER: " + page.nextPageMarker);
+            page = provider.listKeysNonRecursive("x/", page.nextPageMarker, 2).get();
+            assertEquals(Arrays.asList("k3", "k4"), page.keys);
+            page = provider.listKeysNonRecursive("x/", page.nextPageMarker, 2).get();
+            assertEquals(Arrays.asList("k5"), page.keys);
+            assertEquals(null, page.nextPageMarker);
+      }
       System.err.println("done");
     } finally {
       try (Stream<java.nio.file.Path> pathStream = Files.walk(dir)) {
