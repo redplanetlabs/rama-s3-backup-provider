@@ -299,4 +299,9 @@ public class S3BackupProvider implements BackupProvider {
       return failedFuture(e);
     }
   }
+
+  @Override
+  public void close() {
+    client.close();
+  }
 }
