@@ -70,6 +70,11 @@ public class S3BackupProviderIT {
         provider = new S3BackupProvider(uri.toString());
       }
 
+      {
+	AtomicLong callCount = new AtomicLong(0);
+	provider.setProgressListener(new ProgressListener(callCount));
+      }
+
       testing("  when empty");
 
       testing("    lists no keys,");
