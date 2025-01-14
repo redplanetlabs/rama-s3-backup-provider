@@ -6,6 +6,7 @@ import java.nio.ByteBuffer;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import org.reactivestreams.*;
+import org.slf4j.*;
 import software.amazon.awssdk.core.async.AsyncRequestBody;
 import software.amazon.awssdk.core.async.SdkPublisher;
 
@@ -13,6 +14,7 @@ class InputStreamBody
     implements org.reactivestreams.Publisher<ByteBuffer>,
         AsyncRequestBody,
         SdkPublisher<ByteBuffer> {
+  private static final Logger LOGGER = LoggerFactory.getLogger(InputStreamBody.class);
 
   AsyncRequestBody delegate;
   ProgressListener progressListener;
@@ -34,7 +36,9 @@ class InputStreamBody
       }
 
       @Override
-      public void onError(Throwable t) { }
+      public void onError(Throwable t) {
+        LOGGER.error("Error during upload to S3", t);
+      }
 
       @Override
       public void onSubscribe(Subscription s) {

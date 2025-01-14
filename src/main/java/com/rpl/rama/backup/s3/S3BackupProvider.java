@@ -161,13 +161,12 @@ public class S3BackupProvider implements BackupProvider {
       final AsyncRequestBody body =
           new InputStreamBody(progressListener, inputStream, contentLength, execServ);
       final CompletableFuture<Void> result =
-          client
-              .putObject(request, body)
-              .thenApply(
-                  (res) -> {
-                    reportProgress();
-                    return null;
-                  });
+          client.putObject(request, body)
+                .thenApply(
+                    (res) -> {
+                      reportProgress();
+                      return null;
+                    });
       return result;
     } catch (final S3Exception e) {
       return failedFuture(e);
