@@ -10,17 +10,13 @@ import org.slf4j.*;
 import software.amazon.awssdk.core.async.AsyncRequestBody;
 import software.amazon.awssdk.core.async.SdkPublisher;
 
-class InputStreamBody
-    implements org.reactivestreams.Publisher<ByteBuffer>,
-        AsyncRequestBody,
-        SdkPublisher<ByteBuffer> {
+class InputStreamBody implements AsyncRequestBody{
   private static final Logger LOGGER = LoggerFactory.getLogger(InputStreamBody.class);
 
   AsyncRequestBody delegate;
   ProgressListener progressListener;
 
-  InputStreamBody(
-      ProgressListener listener, InputStream is, Long contentLength, ExecutorService execServ) {
+  InputStreamBody(ProgressListener listener, InputStream is, Long contentLength, ExecutorService execServ) {
     if(listener == null) throw new RuntimeException("Progress listener must not be null");
     progressListener = listener;
     delegate = AsyncRequestBody.fromInputStream(is, contentLength, execServ);
@@ -42,6 +38,7 @@ class InputStreamBody
 
       @Override
       public void onSubscribe(Subscription s) {
+        s.request(Long.MAX_VALUE);
         progressListener.reportProgress();
       }
     });
