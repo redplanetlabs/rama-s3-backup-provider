@@ -2,7 +2,6 @@ package com.rpl.rama.backup.s3;
 
 import com.rpl.rama.backup.BackupProvider;
 import com.rpl.rama.backup.BackupProvider.KeysPage;
-import com.rpl.rama.backup.BackupProvider.ProgressListener;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -20,6 +19,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.core.async.AsyncRequestBody;
+import software.amazon.awssdk.core.async.AsyncResponseTransformer;
 import software.amazon.awssdk.core.client.config.SdkAdvancedAsyncClientOption;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3AsyncClientBuilder;
@@ -46,7 +46,6 @@ public class S3BackupProvider implements BackupProvider {
 
   S3AsyncClient client;
   String bucketName = null;
-  ProgressListener progressListener;
 
   ExecutorService execServ =
       Executors.newCachedThreadPool(
@@ -108,17 +107,6 @@ public class S3BackupProvider implements BackupProvider {
     client.waiter().waitUntilBucketExists(headRequest).get();
   }
 
-  @Override
-  public void setProgressListener(final ProgressListener listener) {
-    progressListener = listener;
-  }
-
-  void reportProgress() {
-    if (progressListener != null) {
-      progressListener.reportProgress();
-    }
-  }
-
   // This is in JDK 9+
   static <T> CompletableFuture<T> failedFuture(Throwable ex) {
     CompletableFuture<T> f = new CompletableFuture<>();
@@ -133,7 +121,7 @@ public class S3BackupProvider implements BackupProvider {
       final GetObjectRequest request =
           GetObjectRequest.builder().key(key).bucket(bucketName).build();
       final CompletableFuture<ResponseInputStream<GetObjectResponse>> resultCf =
-          client.getObject(request, new InputStreamTransformer<>(progressListener));
+          client.getObject(request, AsyncResponseTransformer.toInputStream());
       return (CompletableFuture<T>)
           resultCf.handle(
               (res, ex) -> {
@@ -159,14 +147,14 @@ public class S3BackupProvider implements BackupProvider {
       final PutObjectRequest request =
           PutObjectRequest.builder().key(key).bucket(bucketName).build();
       final AsyncRequestBody body =
-          new InputStreamBody(progressListener, inputStream, contentLength, execServ);
+	  AsyncRequestBody.fromInputStream(inputStream, contentLength);
       final CompletableFuture<Void> result =
-          client.putObject(request, body)
-                .thenApply(
-                    (res) -> {
-                      reportProgress();
-                      return null;
-                    });
+          client
+              .putObject(request, body)
+              .thenApply(
+                  (res) -> {
+                    return null;
+                  });
       return result;
     } catch (final S3Exception e) {
       return failedFuture(e);

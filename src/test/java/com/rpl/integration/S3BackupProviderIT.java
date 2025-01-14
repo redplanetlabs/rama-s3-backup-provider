@@ -25,19 +25,6 @@ public class S3BackupProviderIT {
     }
   }
 
-  private class ProgressListener implements BackupProvider.ProgressListener {
-    AtomicLong callCount;
-
-    public ProgressListener(AtomicLong callCount) {
-      this.callCount = callCount;
-    }
-
-    @Override
-    public void reportProgress() {
-      callCount.incrementAndGet();
-    }
-  }
-
   private static void testing(String s) {
     System.err.println(s);
   }
@@ -68,11 +55,6 @@ public class S3BackupProviderIT {
         String host = System.getProperty("it.s3mock.host", "localhost");
         URI uri = new URI("http", null, host, port, "/testbucket", null, null);
         provider = new S3BackupProvider(uri.toString());
-      }
-
-      {
-	AtomicLong callCount = new AtomicLong(0);
-	provider.setProgressListener(new ProgressListener(callCount));
       }
 
       testing("  when empty");
@@ -144,30 +126,7 @@ public class S3BackupProviderIT {
         assertEquals(Arrays.asList("a/b/c"), page.keys);
         assert page.nextPageMarker == null;
       }
-      testing("  with a progress listener");
-      {
-        AtomicLong callCount = new AtomicLong(0);
-        ProgressListener listener = new ProgressListener(callCount);
-        provider.setProgressListener(listener);
 
-        String key = "a/b/with-listener";
-        testing("    putObject calls the listener");
-        {
-          byte[] content = "abc".getBytes();
-          provider.putObject(key, new ByteArrayInputStream(content), 3L).get();
-          assert callCount.get() > 1;
-        }
-        testing("    getObject calls the listener");
-        {
-          callCount.set(0);
-          InputStream inputStream = provider.getObject(key).get();
-          String text =
-              new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8))
-                  .lines()
-                  .collect(Collectors.joining("\n"));
-          assert callCount.get() > 1;
-        }
-      }
       testing("  paginated list keys");
       {
             byte[] content = "abc".getBytes();
