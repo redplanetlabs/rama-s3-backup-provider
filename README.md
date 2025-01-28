@@ -2,7 +2,7 @@ A backup provider for Rama that uses AWS S3.
 
 # Usage
 
-To use the provider, include the provided jar in the `lib/` directory of the Conductor and Supervisor nodes.
+To use the provider, download the provided jar from the [releases page](https://github.com/redplanetlabs/rama-s3-backup-provider/releases) and include it in the `lib/` directory of the Conductor and Supervisor nodes.
 
 Set the `backup.provider` config to:
 
