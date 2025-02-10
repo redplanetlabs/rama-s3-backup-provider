@@ -4,7 +4,7 @@
 
   <groupId>com.rpl</groupId>
   <artifactId>rama-s3-backup-provider</artifactId>
-  <version>1.0.0</version>
+  <version>1.1.0</version>
   <name>S3 Backup Provider</name>
   <description>A backup provider for Rama clusters that stores data in
       an S3 bucket on AWS.</description>
@@ -34,7 +34,7 @@
              may not be identical to the top level version -->
         <groupId>software.amazon.awssdk</groupId>
         <artifactId>bom</artifactId>
-        <version>2.22.9</version>
+        <version>2.30.16</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>
@@ -78,6 +78,28 @@
         <exclusion>
             <groupId>commons-logging</groupId>
             <artifactId>commons-logging</artifactId>
+        </exclusion>
+        <exclusion>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpclient</artifactId>
+        </exclusion>
+        <exclusion>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpcore</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>software.amazon.awssdk</groupId>
+      <artifactId>sts</artifactId>
+      <exclusions>
+        <exclusion>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpclient</artifactId>
+        </exclusion>
+        <exclusion>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpcore</artifactId>
         </exclusion>
       </exclusions>
     </dependency>
